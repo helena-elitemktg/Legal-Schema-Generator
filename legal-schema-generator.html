@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Legal Schema Generator — Internal Tool v2</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0f172a;--navy2:#1a2744;--accent:#2563eb;--accent-d:#1d4ed8;--accent-l:#eff6ff;
+  --green:#16a34a;--green-l:#f0fdf4;--amber:#b45309;--amber-l:#fffbeb;--amb-b:#fde68a;
+  --red:#dc2626;--red-l:#fef2f2;--blue-l:#dbeafe;--info:#1e40af;
+  --text:#0f172a;--text2:#475569;--text3:#94a3b8;
+  --bg:#f1f5f9;--surf:#fff;--bdr:#e2e8f0;--bdr2:#cbd5e1;
+  --code:#1e293b;--codebg:#0f172a
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:13px;line-height:1.5;min-height:100vh}
+
+/* HEADER */
+.hdr{height:48px;background:var(--navy);display:flex;align-items:center;justify-content:space-between;padding:0 18px;position:sticky;top:0;z-index:200;box-shadow:0 1px 0 rgba(255,255,255,.06)}
+.hdr-l{display:flex;align-items:center;gap:10px}
+.logo{width:26px;height:26px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#fff;flex-shrink:0}
+.hdr-title{font-size:14px;font-weight:600;color:#fff}
+.hdr-badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:99px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:#94a3b8;letter-spacing:.04em}
+.hdr-links{display:flex;gap:6px}
+.hdr-a{font-size:11px;color:#64748b;text-decoration:none;padding:4px 8px;border-radius:4px;border:1px solid rgba(255,255,255,.07);transition:all .15s}
+.hdr-a:hover{color:#e2e8f0;border-color:rgba(255,255,255,.18)}
+
+/* LAYOUT */
+.main{display:grid;grid-template-columns:52% 1fr;height:calc(100vh - 48px)}
+.fp{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--bdr)}
+.fscroll{flex:1;overflow-y:auto;padding:14px;scrollbar-width:thin;scrollbar-color:var(--bdr2) transparent}
+.fscroll::-webkit-scrollbar{width:5px}
+.fscroll::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:99px}
+.ffooter{padding:10px 14px;background:var(--bg);border-top:1px solid var(--bdr)}
+.op{overflow-y:auto;background:var(--navy);padding:16px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.1) transparent}
+.op::-webkit-scrollbar{width:5px}
+.op::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:99px}
+
+/* FORM NOTE */
+.fnote{background:var(--blue-l);border:1px solid #bfdbfe;border-radius:6px;padding:9px 12px;margin-bottom:12px;font-size:11px;color:var(--info);line-height:1.6}
+
+/* CARDS */
+.card{background:var(--surf);border:1px solid var(--bdr);border-radius:8px;margin-bottom:10px;overflow:hidden}
+.ch{padding:9px 14px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+.ch:hover{background:#fafafa}
+.ch-l{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+.ctitle{font-weight:600;font-size:12px;color:var(--text)}
+.cchev{font-size:10px;color:var(--text3);flex-shrink:0;transition:transform .2s;display:inline-block}
+.cbody{padding:14px}
+
+/* BADGES */
+.bdg{font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;white-space:nowrap;flex-shrink:0}
+.b-req{background:var(--red-l);color:var(--red)}
+.b-opt{background:#f1f5f9;color:var(--text2)}
+.b-cond{background:var(--amber-l);color:var(--amber)}
+
+/* FIELDS */
+.fld{margin-bottom:11px}
+.fld:last-child{margin-bottom:0}
+.lbl{display:block;font-size:11px;font-weight:600;color:var(--text);margin-bottom:3px}
+.req{color:var(--red)}
+.oopt{font-weight:400;color:var(--text3);font-size:10px;margin-left:3px}
+.hint{font-size:11px;color:var(--text2);margin-top:3px;line-height:1.4}
+.hint-w{color:var(--amber);font-size:11px;margin-top:3px;line-height:1.4}
+.hint-b{color:var(--accent);font-size:11px;margin-top:3px;line-height:1.4}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+
+input[type=text],input[type=url],input[type=tel],input[type=number],
+input[type=date],input[type=time],textarea,select{
+  width:100%;padding:6px 9px;border:1px solid var(--bdr2);border-radius:5px;
+  font-family:inherit;font-size:12px;color:var(--text);background:#fff;
+  transition:border-color .15s,box-shadow .15s;outline:none
+}
+input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+input:disabled,input[disabled]{background:#f8fafc;color:var(--text3);cursor:not-allowed;border-color:var(--bdr)}
+textarea{resize:vertical;min-height:60px;line-height:1.5}
+select{cursor:pointer}
+
+/* HOURS */
+.hrs-qs{display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+/* RADIO OPTIONS (card 3) */
+.r-opts{display:flex;gap:16px;margin-top:5px}
+.r-opt{display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:var(--text2)}
+.r-opt input[type=radio]{accent-color:var(--accent);cursor:pointer;width:auto;padding:0}
+/* INLINE CODE */
+code.ic{background:rgba(0,0,0,.07);padding:1px 4px;border-radius:3px;font-family:monospace;font-size:10px;color:var(--text)}
+/* NOTICE TEXT BLOCK */
+.notice-txt{background:#f8fafc;border:1px solid var(--bdr);border-radius:5px;padding:9px 11px;margin-top:10px}
+.qsbtn{background:none;border:1px solid var(--bdr2);color:var(--text2);font-size:11px;padding:4px 9px;border-radius:4px;cursor:pointer;font-family:inherit;transition:all .15s}
+.qsbtn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-l)}
+.hrs-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.hrs-tbl th{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;padding:4px 6px;text-align:left;border-bottom:1px solid var(--bdr)}
+.hrs-tbl td{padding:5px 6px;vertical-align:middle;border-bottom:1px solid var(--bdr)}
+.hrs-tbl tr:last-child td{border-bottom:none}
+.hrs-tbl td:first-child{font-weight:500;color:var(--text);width:88px;font-size:12px}
+.day-radios{display:flex;gap:10px}
+.day-r{display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;color:var(--text2)}
+.day-r input{accent-color:var(--accent);cursor:pointer}
+.hrs-tbl input[type=time]{width:96px;padding:4px 6px;font-size:11px}
+
+/* DYNAMIC LIST */
+.dyn{display:flex;flex-direction:column;gap:6px}
+.drow{display:flex;gap:6px;align-items:center}
+.drow input{flex:1}
+.rm-btn{background:none;border:1px solid var(--bdr2);color:var(--text3);cursor:pointer;padding:4px 8px;border-radius:4px;font-size:11px;font-family:inherit;transition:all .15s;flex-shrink:0}
+.rm-btn:hover{border-color:var(--red);color:var(--red);background:var(--red-l)}
+.add-btn{display:inline-flex;align-items:center;gap:4px;background:none;border:1px dashed var(--bdr2);color:var(--text2);cursor:pointer;padding:5px 10px;border-radius:5px;font-size:11px;font-family:inherit;transition:all .15s;margin-top:4px}
+.add-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-l)}
+
+/* FAQ */
+.faq-pair{border:1px solid var(--bdr);border-radius:6px;padding:10px;margin-bottom:8px;background:#fafafa}
+.faq-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.faq-num{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em}
+
+/* GATE */
+.gate{border:1px solid var(--amb-b);background:var(--amber-l);border-radius:6px;padding:11px 13px}
+.gate-lbl{display:flex;gap:8px;cursor:pointer;font-size:12px;color:#78350f;line-height:1.5;align-items:flex-start}
+.gate-lbl input{accent-color:var(--amber);flex-shrink:0;margin-top:2px;cursor:pointer}
+.gate-bdy{display:none;margin-top:11px;padding-top:11px;border-top:1px solid var(--amb-b)}
+.gate-bdy.on{display:block}
+.gate-sec{font-size:11px;font-weight:600;color:#78350f;margin-bottom:8px}
+hr.g-hr{border:none;border-top:1px solid var(--amb-b);margin:10px 0}
+
+/* DIVIDER */
+hr.fd{border:none;border-top:1px solid var(--bdr);margin:12px 0}
+
+/* NOTICE BOX */
+.notice{border-radius:5px;padding:8px 11px;margin-bottom:12px;font-size:11px;line-height:1.5}
+.notice-w{background:var(--amber-l);border:1px solid var(--amb-b);color:#78350f}
+.notice-o{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412}
+.notice-i{background:var(--blue-l);border:1px solid #bfdbfe;color:var(--info)}
+
+/* GENERATE BUTTON */
+.genbtn{width:100%;background:var(--accent);color:#fff;border:none;padding:10px 20px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;letter-spacing:-.01em}
+.genbtn:hover{background:var(--accent-d)}
+.genbtn:active{transform:scale(.99)}
+
+/* OUTPUT PLACEHOLDER */
+.o-ph{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;text-align:center;padding:40px 20px}
+.o-ph-ico{font-size:36px;margin-bottom:12px;opacity:.18}
+.o-ph-txt{font-size:12px;line-height:1.7;color:#475569;max-width:220px}
+
+/* SUMMARY */
+.sum-card{background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:14px;overflow:hidden}
+.sum-hd{padding:9px 14px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;justify-content:space-between}
+.sum-title{font-size:12px;font-weight:600;color:#e2e8f0}
+.sum-ct{font-size:11px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:#94a3b8;padding:2px 8px;border-radius:99px}
+.sum-bdy{padding:6px}
+.si{display:flex;align-items:flex-start;gap:7px;padding:6px 8px;border-radius:5px;margin-bottom:2px}
+.si:last-child{margin-bottom:0}
+.si-ok{background:rgba(22,163,74,.12)}
+.si-skip{background:rgba(37,99,235,.1)}
+.si-warn{background:rgba(180,83,9,.12)}
+.si-info{background:rgba(37,99,235,.1)}
+.si-ico{font-size:12px;flex-shrink:0;line-height:1.3;margin-top:1px}
+.si-txt{font-size:11px;line-height:1.5}
+.si-txt strong{display:block;font-size:11px;font-weight:600}
+.si-ok   .si-txt strong{color:#4ade80}
+.si-skip .si-txt strong{color:#93c5fd}
+.si-warn .si-txt strong{color:#fbbf24}
+.si-info .si-txt strong{color:#93c5fd}
+.si-txt span{color:#64748b;font-size:11px}
+
+/* CODE BLOCKS */
+.o-sec{margin-bottom:12px}
+.o-lbl{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.o-badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:99px}
+.ob-json{background:rgba(22,163,74,.15);color:#4ade80}
+.ob-geo{background:rgba(99,102,241,.15);color:#a5b4fc}
+.ob-exp{background:rgba(180,83,9,.18);color:#d97706}
+.cw{background:var(--code);border-radius:6px;overflow:hidden}
+.ctop{display:flex;justify-content:space-between;align-items:center;padding:7px 11px;background:var(--codebg);border-bottom:1px solid rgba(255,255,255,.06)}
+.ctag{font-size:10px;font-weight:600;color:#7dd3fc;font-family:monospace;letter-spacing:.02em}
+.cp-btn{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.11);color:#94a3b8;font-size:10px;padding:3px 9px;border-radius:4px;cursor:pointer;font-family:inherit;transition:all .15s}
+.cp-btn:hover{background:rgba(255,255,255,.13);color:#e2e8f0}
+.cp-btn.did{background:rgba(22,163,74,.2);border-color:rgba(74,222,128,.25);color:#4ade80}
+.cinner{padding:10px 12px;overflow-x:auto;max-height:320px;overflow-y:auto}
+.cinner::-webkit-scrollbar{width:4px;height:4px}
+.cinner::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:99px}
+pre.ccode{font-family:'Courier New',monospace;font-size:11px;line-height:1.65;color:#e2e8f0;white-space:pre;margin:0}
+.geo-inner{background:#13203a;padding:10px 12px;overflow-x:auto}
+pre.geocode{font-family:'Courier New',monospace;font-size:11px;line-height:1.65;color:#c4b5fd;white-space:pre;margin:0}
+.ck{color:#7dd3fc}.cs{color:#86efac}.cn{color:#fca5a5}
+
+/* COPY ALL + VALIDATION */
+.copy-all-wrap{padding-top:12px;border-top:1px solid rgba(255,255,255,.07);margin-top:4px}
+.copy-all-btn{width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#94a3b8;font-size:12px;font-weight:500;padding:9px 16px;border-radius:6px;cursor:pointer;font-family:inherit;transition:all .15s}
+.copy-all-btn:hover:not(:disabled){background:rgba(255,255,255,.1);color:#e2e8f0}
+.copy-all-btn:disabled{opacity:.35;cursor:default}
+.copy-all-btn.did{background:rgba(22,163,74,.2);border-color:rgba(74,222,128,.25);color:#4ade80}
+.val-box{background:rgba(37,99,235,.08);border:1px solid rgba(99,162,255,.2);border-radius:6px;padding:10px 12px;margin-top:10px}
+.val-box p{font-size:11px;color:#93c5fd;line-height:1.6;margin-bottom:6px}
+.val-links{display:flex;gap:10px;flex-wrap:wrap}
+.val-a{font-size:11px;color:#60a5fa;text-decoration:none}
+.val-a:hover{color:#93c5fd;text-decoration:underline}
+
+/* NOTHING GENERATED */
+.o-empty{background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:24px;text-align:center}
+.o-empty p{font-size:12px;color:#475569;line-height:1.7}
+
+@media(max-width:860px){.main{grid-template-columns:1fr;height:auto}.fp{height:auto}}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-l">
+    <div class="logo">S</div>
+    <span class="hdr-title">Legal Schema Generator</span>
+    <span class="hdr-badge">INTERNAL · v2</span>
+  </div>
+  <div class="hdr-links">
+    <a class="hdr-a" href="https://search.google.com/test/rich-results" target="_blank" rel="noopener">Rich Results Test ↗</a>
+    <a class="hdr-a" href="https://validator.schema.org/" target="_blank" rel="noopener">Schema Validator ↗</a>
+  </div>
+</header>
+
+<div class="main">
+
+<!-- ════════ FORM PANEL ════════ -->
+<div class="fp">
+<div class="fscroll">
+
+  <div class="fnote">
+    <strong>Fields marked with <span style="color:var(--red)">*</span> are required for their related schema block to generate.</strong>
+    Optional fields are omitted from output if left blank. Complete the form, then click <strong>Generate Valid Schema</strong>.
+  </div>
+
+  <!-- ── CARD 1: LegalService ── -->
+  <div class="card">
+    <div class="ch" onclick="tc(this)">
+      <div class="ch-l"><span class="ctitle">1 — Firm &amp; Service Info</span><span class="bdg b-req">Required — LegalService</span></div>
+      <span class="cchev">▾</span>
+    </div>
+    <div class="cbody">
+
+      <div class="g2">
+        <div class="fld">
+          <label class="lbl">Firm display name <span class="req">*</span></label>
+          <input type="text" id="firmName" placeholder="Dormer Harpring Denver Injury Lawyers">
+        </div>
+        <div class="fld">
+          <label class="lbl">Legal name <span class="oopt">(optional)</span></label>
+          <input type="text" id="legalName" placeholder="Dormer Harpring LLC">
+          <p class="hint">Formal registered name if different from display name</p>
+        </div>
+      </div>
+
+      <div class="g2">
+        <div class="fld">
+          <label class="lbl">Homepage URL <span class="req">*</span></label>
+          <input type="url" id="homepageUrl" placeholder="https://www.denvertrial.com/">
+          <p class="hint">Base for all @id values</p>
+        </div>
+        <div class="fld">
+          <label class="lbl">Practice area page URL <span class="req">*</span></label>
+          <input type="url" id="pageUrl" placeholder="https://www.denvertrial.com/car-accident-lawyer/">
+        </div>
+      </div>
+
+      <div class="g2">
+        <div class="fld">
+          <label class="lbl">Phone number <span class="req">*</span></label>
+          <input type="tel" id="telephone" placeholder="(303) 747-4404">
+          <p class="hint-w">Use the client's real business phone number, not a CallRail tracking number. To double-check, verify the number in CallRail before adding it.</p>
+        </div>
+        <div class="fld">
+          <label class="lbl">Price range <span class="oopt">(optional)</span></label>
+          <select id="priceRange">
+            <option value="">— omit —</option>
+            <option value="$$">$$</option>
+            <option value="$$$">$$$</option>
+            <option value="Contingency">Contingency</option>
+            <option value="Varies">Varies</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="fld">
+        <label class="lbl">Street address <span class="req">*</span></label>
+        <input type="text" id="streetAddress" placeholder="3457 Ringsby Ct Unit 110">
+      </div>
+
+      <div class="g3">
+        <div class="fld">
+          <label class="lbl">City <span class="req">*</span></label>
+          <input type="text" id="city" placeholder="Denver">
+        </div>
+        <div class="fld">
+          <label class="lbl">State abbr. <span class="req">*</span></label>
+          <input type="text" id="stateAbbr" placeholder="CO" maxlength="2">
+        </div>
+        <div class="fld">
+          <label class="lbl">ZIP code <span class="req">*</span></label>
+          <input type="text" id="zipCode" placeholder="80216">
+        </div>
+      </div>
+
+      <div class="fld" style="max-width:140px">
+        <label class="lbl">Country <span class="req">*</span></label>
+        <input type="text" id="country" placeholder="US" value="US" maxlength="2">
+      </div>
+
+      <hr class="fd">
+      <p class="lbl" style="margin-bottom:4px">GeoCoordinates <span class="req">*</span></p>
+      <div class="g2">
+        <div class="fld">
+          <label class="lbl" style="font-weight:400">Latitude <span class="req">*</span></label>
+          <input type="number" id="latitude" placeholder="39.7726287" step="any">
+        </div>
+        <div class="fld">
+          <label class="lbl" style="font-weight:400">Longitude <span class="req">*</span></label>
+          <input type="number" id="longitude" placeholder="-104.9868892" step="any">
+        </div>
+      </div>
+      <p class="hint-b">Latitude and longitude help reinforce the firm's physical office location in structured data. Use coordinates for the verified office location, preferably from the client's Google Business Profile or Google Maps listing. If either value is missing, the geo property is omitted and a warning appears in the Generation Summary.</p>
+
+      <hr class="fd">
+
+      <div class="fld">
+        <label class="lbl">Service description <span class="oopt">(optional — recommended)</span></label>
+        <textarea id="description" placeholder="Denver car accident lawyers helping injury victims recover maximum compensation. Free consultations. No fee unless we win."></textarea>
+        <p class="hint">50–160 chars recommended. Must reflect content visible on the page.</p>
+      </div>
+
+      <div class="g2">
+        <div class="fld">
+          <label class="lbl">Image / logo URL <span class="oopt">(optional)</span></label>
+          <input type="url" id="imageUrl" placeholder="https://www.denvertrial.com/logo.png">
+        </div>
+        <div class="fld">
+          <label class="lbl">Google Maps URL <span class="oopt">(optional)</span></label>
+          <input type="url" id="hasMap" placeholder="https://www.google.com/maps/place/...">
+        </div>
+      </div>
+
+      <div class="g2">
+        <div class="fld">
+          <label class="lbl">Area served — city <span class="oopt">(optional)</span></label>
+          <input type="text" id="areaServed" placeholder="Denver">
+        </div>
+        <div class="fld">
+          <label class="lbl">Founding year <span class="oopt">(optional)</span></label>
+          <input type="number" id="foundingYear" placeholder="2005" min="1800" max="2099">
+        </div>
+      </div>
+
+      <div class="fld">
+        <label class="lbl">Social &amp; directory profiles — sameAs <span class="oopt">(optional)</span></label>
+        <div class="dyn" id="sameAsList"></div>
+        <button class="add-btn" type="button" onclick="addSameAs()">＋ Add profile URL</button>
+        <p class="hint-w" style="margin-top:5px">Only include active URLs. Verify each returns a 200 response before adding.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── CARD 2: Business Hours ── -->
+  <div class="card">
+    <div class="ch" onclick="tc(this)">
+      <div class="ch-l"><span class="ctitle">2 — Business Hours</span><span class="bdg b-opt">Optional — added to LegalService</span></div>
+      <span class="cchev">▾</span>
+    </div>
+    <div class="cbody">
+      <div class="hrs-qs">
+        <span class="hint" style="color:var(--text2)">Quick set:</span>
+        <button class="qsbtn" type="button" onclick="quickHrs('247')">24 / 7</button>
+        <button class="qsbtn" type="button" onclick="quickHrs('mf95')">Mon–Fri 9–5</button>
+        <button class="qsbtn" type="button" onclick="quickHrs('clear')">Clear all</button>
+      </div>
+      <table class="hrs-tbl">
+        <thead><tr><th>Day</th><th>Status</th><th>Opens</th><th>Closes</th></tr></thead>
+        <tbody id="hrsBody"></tbody>
+      </table>
+      <p class="hint" style="margin-top:8px">Closed days are omitted. An open day missing a time value will be omitted and flagged in the Generation Summary.</p>
+    </div>
+  </div>
+
+  <!-- ── CARD 3: Page & Site Info ── -->
+  <div class="card">
+    <div class="ch" onclick="tc(this)">
+      <div class="ch-l"><span class="ctitle">3 — Page &amp; Site Info</span><span class="bdg b-cond">Generates WebPage + BreadcrumbList + Organization</span></div>
+      <span class="cchev">▾</span>
+    </div>
+    <div class="cbody">
+
+      <!-- @graph duplicate check -->
+      <div class="fld">
+        <label class="lbl">Does this page already have an existing @graph block from Yoast SEO, RankMath, or another SEO plugin? <span class="req">*</span></label>
+        <div class="r-opts">
+          <label class="r-opt"><input type="radio" name="graphExists" value="yes" onchange="graphCheckUI()"> Yes</label>
+          <label class="r-opt"><input type="radio" name="graphExists" value="no" onchange="graphCheckUI()"> No</label>
+        </div>
+        <p class="hint" style="margin-top:5px">To check: open the live page, right-click → View Page Source, then search for <code class="ic">yoast-schema-graph</code>. If you find it, select Yes and do not duplicate the WebPage + BreadcrumbList + Organization block. You can also search for <code class="ic">@graph</code> if needed.</p>
+      </div>
+
+      <div class="notice-txt">
+        <p style="font-size:11px;color:var(--text2);line-height:1.5;margin-bottom:6px">Finding <code class="ic">yoast-schema-graph</code> usually means Yoast is already generating the general page/entity schema layer, such as WebPage, WebSite, Organization, and sometimes BreadcrumbList. It does not mean LegalService or other legal-specific schema has been added.</p>
+        <p style="font-size:11px;color:var(--text2);line-height:1.5">If using Yoast SEO or RankMath, verify the site-level schema settings are accurate before relying on the existing @graph. Confirm the correct Organization name, logo, homepage URL, social profiles, and breadcrumb settings. The page title and meta description should also be accurate for the specific landing page.</p>
+      </div>
+
+      <!-- "Yes" selected: intentional skip notice (info/blue, not warning) -->
+      <div id="graphYesMsg" class="notice notice-i" style="display:none;margin-top:10px;margin-bottom:0">
+        <strong>Good to skip ℹ️</strong> Since an existing @graph block was marked as present, the generator will not create a duplicate WebPage + BreadcrumbList + Organization block. You can still generate LegalService and any eligible optional blocks.
+      </div>
+
+      <!-- Fields — hidden when "Yes" is selected -->
+      <div id="graphFields" style="margin-top:12px">
+        <div class="g2">
+          <div class="fld">
+            <label class="lbl">Page title tag <span class="req">*</span></label>
+            <input type="text" id="pageTitle" placeholder="Denver Car Accident Lawyer | Firm Name">
+          </div>
+          <div class="fld">
+            <label class="lbl">Logo image URL <span class="req">*</span></label>
+            <input type="url" id="logoUrl" placeholder="https://www.denvertrial.com/logo.svg">
+          </div>
+        </div>
+
+        <div class="fld">
+          <label class="lbl">Page meta description <span class="req">*</span></label>
+          <textarea id="metaDesc" style="min-height:50px" placeholder="Injured in a Denver car accident? Our attorneys have helped thousands of victims recover..."></textarea>
+        </div>
+
+        <hr class="fd">
+        <p class="lbl" style="margin-bottom:6px">Breadcrumb trail</p>
+        <p class="hint" style="margin-bottom:10px">Home (item 1) is generated automatically. Add a middle level only if a hub page exists between Home and this page.</p>
+
+        <div class="fld">
+          <label class="lbl">Middle level label <span class="oopt">(optional)</span></label>
+          <input type="text" id="crumbMid" placeholder="Practice Areas" oninput="crumbMidUI()">
+        </div>
+        <div class="fld" id="crumbMidUrlWrap" style="display:none">
+          <label class="lbl">Middle level URL</label>
+          <input type="url" id="crumbMidUrl" placeholder="https://www.denvertrial.com/practice-areas/">
+        </div>
+        <div class="fld">
+          <label class="lbl">Final breadcrumb label <span class="req">*</span></label>
+          <input type="text" id="crumbFinal" placeholder="Car Accident Lawyer">
+        </div>
+
+        <hr class="fd">
+
+        <div class="g2">
+          <div class="fld">
+            <label class="lbl">Date published <span class="oopt">(optional)</span></label>
+            <input type="date" id="datePub">
+          </div>
+          <div class="fld">
+            <label class="lbl">Date last modified <span class="oopt">(optional)</span></label>
+            <input type="date" id="dateMod">
+          </div>
+        </div>
+        <p class="hint-w">Only enter real dates. Do not estimate. Leave blank if unknown.</p>
+      </div><!-- /graphFields -->
+
+    </div>
+  </div>
+
+  <!-- ── CARD 4: FAQ ── -->
+  <div class="card">
+    <div class="ch" onclick="tc(this)">
+      <div class="ch-l"><span class="ctitle">4 — FAQ Section</span><span class="bdg b-cond">Only generated if visible FAQ content exists on page</span></div>
+      <span class="cchev">▾</span>
+    </div>
+    <div class="cbody">
+      <div class="notice notice-o">
+        Only enter Q&amp;A that is <strong>already visible on the published page</strong>. Copy text verbatim — do not paraphrase or invent. Minimum <strong>2 complete pairs</strong> required to generate FAQPage schema.
+      </div>
+      <div id="faqList"></div>
+      <button class="add-btn" type="button" onclick="addFAQ()">＋ Add FAQ pair</button>
+    </div>
+  </div>
+
+  <!-- ── CARD 5: Ratings & Experimental Product ── -->
+  <div class="card">
+    <div class="ch" onclick="tc(this)">
+      <div class="ch-l"><span class="ctitle">5 — Ratings &amp; Experimental Product</span><span class="bdg b-cond">Optional — requires confirmation</span></div>
+      <span class="cchev">▾</span>
+    </div>
+    <div class="cbody">
+      <p style="font-size:11px;font-weight:600;color:var(--amber);margin-bottom:10px">Product is optional, experimental, and only for visible verified reviews.</p>
+      <div class="gate">
+        <label class="gate-lbl">
+          <input type="checkbox" id="ratingOk" onchange="gateOn('ratingGate','ratingOk')">
+          <span>I confirm all rating and review data below is <strong>visible on the published page</strong> and matches a verified source (Google Business Profile or equivalent). This data is not fabricated or estimated.</span>
+        </label>
+        <div class="gate-bdy" id="ratingGate">
+          <p class="gate-sec">Aggregate Rating — added to LegalService block</p>
+          <div class="g2">
+            <div class="fld">
+              <label class="lbl">Average rating (1–5)</label>
+              <input type="number" id="ratingVal" placeholder="4.9" min="1" max="5" step="0.1">
+            </div>
+            <div class="fld">
+              <label class="lbl">Total review count</label>
+              <input type="number" id="reviewCount" placeholder="127" min="1" step="1">
+            </div>
+          </div>
+          <p class="hint" style="margin-bottom:0">Both fields required to generate AggregateRating on LegalService. Values must match exactly what is shown on the page or verified GBP profile.</p>
+          <hr class="g-hr">
+          <div class="fld" style="margin-bottom:0">
+            <label class="lbl" style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600">
+              <input type="checkbox" id="productOptIn" style="width:auto;padding:0" onchange="productOptInUI()">
+              Also generate experimental Product block
+            </label>
+            <p class="hint" style="margin-top:4px">Enable only if the page visibly shows reviews matching the data above. Remove this block if Google issues guidance against Product use on service pages.</p>
+          </div>
+          <div id="productFields" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--amb-b)">
+            <p class="gate-sec" style="margin-bottom:8px">Product — one visible matching Review item required</p>
+            <div class="fld">
+              <label class="lbl">Reviewer name <span class="req">*</span></label>
+              <input type="text" id="reviewerName" placeholder="Jane D.">
+              <p class="hint">Exactly as it appears on the page or platform</p>
+            </div>
+            <div class="fld">
+              <label class="lbl">Review text (verbatim) <span class="req">*</span></label>
+              <textarea id="reviewText" placeholder="Copy the review text exactly as it appears on the page..."></textarea>
+            </div>
+            <div class="fld" style="margin-bottom:0">
+              <label class="lbl">Reviewer rating (1–5) <span class="req">*</span></label>
+              <input type="number" id="reviewRating" placeholder="5" min="1" max="5" step="1" style="max-width:90px">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CARD 6: Attorney ── -->
+  <div class="card">
+    <div class="ch" onclick="tc(this)">
+      <div class="ch-l"><span class="ctitle">6 — Attorney Info</span><span class="bdg b-cond">Optional — requires confirmation</span></div>
+      <span class="cchev">▾</span>
+    </div>
+    <div class="cbody">
+      <div class="gate">
+        <label class="gate-lbl">
+          <input type="checkbox" id="attyOk" onchange="gateOn('attyGate','attyOk')">
+          <span>I confirm the attorney's name, credentials, and any bar number entered below are <strong>visible on the published page</strong> or have been verified directly by the client or internal team.</span>
+        </label>
+        <div class="gate-bdy" id="attyGate">
+          <div class="g2">
+            <div class="fld">
+              <label class="lbl">Attorney full name <span class="req">*</span></label>
+              <input type="text" id="attyName" placeholder="Jane Smith">
+            </div>
+            <div class="fld">
+              <label class="lbl">Job title <span class="oopt">(optional)</span></label>
+              <input type="text" id="attyTitle" placeholder="Personal Injury Attorney">
+            </div>
+          </div>
+          <div class="g2">
+            <div class="fld">
+              <label class="lbl">Attorney bio URL <span class="oopt">(optional)</span></label>
+              <input type="url" id="attyUrl" placeholder="https://www.denvertrial.com/attorneys/jane-smith/">
+            </div>
+            <div class="fld">
+              <label class="lbl">State bar number <span class="oopt">(optional)</span></label>
+              <input type="text" id="attyBar" placeholder="123456">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /fscroll -->
+<div class="ffooter">
+  <button class="genbtn" type="button" onclick="generate()">Generate Valid Schema</button>
+</div>
+</div><!-- /fp -->
+
+
+<!-- ════════ OUTPUT PANEL ════════ -->
+<div class="op" id="outPanel">
+  <div class="o-ph" id="oPh">
+    <div class="o-ph-ico">{ }</div>
+    <p class="o-ph-txt">Fill out the form on the left, then click <strong style="color:#94a3b8">Generate Valid Schema</strong> to see your output here.</p>
+  </div>
+  <div id="outArea" style="display:none"></div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+/* ── STATE ── */
+const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+let daySched=DAYS.map(n=>({name:n,status:'closed',open:'',close:''}));
+let faqItems=[];
+let sameAsList=['','',''];
+let _jsonBlocks=[];
+
+/* ── INIT ── */
+document.addEventListener('DOMContentLoaded',()=>{
+  renderHours();
+  renderSameAs();
+  renderFAQ();
+});
+
+/* ── CARD TOGGLE ── */
+function tc(header){
+  const body=header.nextElementSibling;
+  const chev=header.querySelector('.cchev');
+  const open=body.style.display!=='none';
+  body.style.display=open?'none':'block';
+  chev.style.transform=open?'rotate(-90deg)':'rotate(0)';
+}
+
+/* ── GATE TOGGLE ── */
+function gateOn(gid,cid){
+  document.getElementById(gid).classList.toggle('on',document.getElementById(cid).checked);
+}
+
+/* ── @GRAPH CHECK ── */
+function graphCheckUI(){
+  const val=document.querySelector('input[name="graphExists"]:checked')?.value;
+  document.getElementById('graphYesMsg').style.display=(val==='yes')?'block':'none';
+  document.getElementById('graphFields').style.display=(val==='yes')?'none':'block';
+}
+
+/* ── CRUMB MID ── */
+function crumbMidUI(){
+  const v=(document.getElementById('crumbMid')?.value||'').trim();
+  document.getElementById('crumbMidUrlWrap').style.display=v?'block':'none';
+}
+
+/* ── HOURS ── */
+function renderHours(){
+  const tb=document.getElementById('hrsBody');
+  tb.innerHTML='';
+  daySched.forEach((d,i)=>{
+    const open=d.status==='open';
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td><strong>${d.name}</strong></td>
+      <td><div class="day-radios">
+        <label class="day-r"><input type="radio" name="d${i}" value="open" ${open?'checked':''} onchange="setDay(${i},'open')"> Open</label>
+        <label class="day-r"><input type="radio" name="d${i}" value="closed" ${!open?'checked':''} onchange="setDay(${i},'closed')"> Closed</label>
+      </div></td>
+      <td><input type="time" id="ho${i}" value="${d.open}" ${!open?'disabled':''} onchange="daySched[${i}].open=this.value"></td>
+      <td><input type="time" id="hc${i}" value="${d.close}" ${!open?'disabled':''} onchange="daySched[${i}].close=this.value"></td>`;
+    tb.appendChild(tr);
+  });
+}
+function setDay(i,s){
+  daySched[i].status=s;
+  const oi=document.getElementById('ho'+i), ci=document.getElementById('hc'+i);
+  if(oi)oi.disabled=(s==='closed');
+  if(ci)ci.disabled=(s==='closed');
+}
+function quickHrs(m){
+  if(m==='247')daySched.forEach(d=>{d.status='open';d.open='00:00';d.close='23:59'});
+  else if(m==='mf95')daySched.forEach((d,i)=>{
+    if(i===0||i===6){d.status='closed';d.open='';d.close='';}
+    else{d.status='open';d.open='09:00';d.close='17:00';}
+  });
+  else daySched.forEach(d=>{d.status='closed';d.open='';d.close='';});
+  renderHours();
+}
+
+/* ── SAMEAS ── */
+function addSameAs(){sameAsList.push('');renderSameAs();}
+function rmSameAs(i){sameAsList.splice(i,1);renderSameAs();}
+function renderSameAs(){
+  const c=document.getElementById('sameAsList');
+  c.innerHTML='';
+  sameAsList.forEach((v,i)=>{
+    const d=document.createElement('div');
+    d.className='drow';
+    d.innerHTML=`<input type="url" value="${esc(v)}" placeholder="https://www.facebook.com/firmpage" oninput="sameAsList[${i}]=this.value"><button class="rm-btn" type="button" onclick="rmSameAs(${i})">✕</button>`;
+    c.appendChild(d);
+  });
+}
+
+/* ── FAQ ── */
+function addFAQ(){faqItems.push({q:'',a:''});renderFAQ();}
+function rmFAQ(i){faqItems.splice(i,1);renderFAQ();}
+function renderFAQ(){
+  const c=document.getElementById('faqList');
+  c.innerHTML='';
+  faqItems.forEach((f,i)=>{
+    const d=document.createElement('div');
+    d.className='faq-pair';
+    d.innerHTML=`
+      <div class="faq-hd"><span class="faq-num">Pair ${i+1}</span><button class="rm-btn" type="button" onclick="rmFAQ(${i})">Remove</button></div>
+      <div class="fld" style="margin-bottom:8px">
+        <label class="lbl">Question <span class="req">*</span></label>
+        <input type="text" value="${esc(f.q)}" placeholder="What should I do after a car accident?" oninput="faqItems[${i}].q=this.value">
+      </div>
+      <div class="fld" style="margin-bottom:0">
+        <label class="lbl">Answer <span class="req">*</span></label>
+        <textarea oninput="faqItems[${i}].a=this.value" placeholder="Copy the answer verbatim from the published page...">${esc(f.a)}</textarea>
+      </div>`;
+    c.appendChild(d);
+  });
+}
+
+/* ── FIELD HELPERS ── */
+function fv(id){return(document.getElementById(id)?.value||'').trim();}
+function fb(id){return document.getElementById(id)?.checked||false;}
+function stripSlash(u){return u.replace(/\/+$/,'');}
+
+/* ── SYNC HOURS FROM DOM ── */
+function syncHours(){
+  daySched.forEach((d,i)=>{
+    d.open=document.getElementById('ho'+i)?.value||'';
+    d.close=document.getElementById('hc'+i)?.value||'';
+  });
+}
+
+/* ── HOURS SPEC GENERATOR ── */
+function genHoursSpec(summary){
+  const openDays=[],skipped=[];
+  daySched.forEach(d=>{
+    if(d.status!=='open')return;
+    if(!d.open||!d.close){skipped.push(d.name);return;}
+    openDays.push(d);
+  });
+  skipped.forEach(n=>summary.push({type:'warn',lbl:`Hours: ${n}`,msg:'open but opening or closing time is missing — day excluded'}));
+  if(!openDays.length)return null;
+  const groups={};
+  openDays.forEach(d=>{const k=`${d.open}|${d.close}`;if(!groups[k])groups[k]={opens:d.open,closes:d.close,days:[]};groups[k].days.push(d.name);});
+  const specs=Object.values(groups).map(g=>({"@type":"OpeningHoursSpecification","dayOfWeek":g.days,"opens":g.opens,"closes":g.closes}));
+  return specs.length===1?specs[0]:specs;
+}
+
+/* ── LEGALSERVICE ── */
+function genLS(v,summary){
+  const miss=[];
+  if(!v.firmName)   miss.push('firm name');
+  if(!v.homeUrl)    miss.push('homepage URL');
+  if(!v.pageUrl)    miss.push('practice area page URL');
+  if(!v.telephone)  miss.push('phone number');
+  if(!v.streetAddr) miss.push('street address');
+  if(!v.city)       miss.push('city');
+  if(!v.state)      miss.push('state abbreviation');
+  if(!v.zip)        miss.push('ZIP code');
+  if(!v.country)    miss.push('country');
+  if(miss.length){summary.push({type:'warn',lbl:'LegalService',msg:'not generated — missing required fields: '+miss.join(', ')});return null;}
+
+  const home=stripSlash(v.homeUrl);
+  const s={
+    "@context":"https://schema.org",
+    "@type":"LegalService",
+    "@id":home+'#legalservice',
+    "name":v.firmName
+  };
+  if(v.description) s.description=v.description;
+  if(v.imageUrl)    s.image=v.imageUrl;
+  s.url=stripSlash(v.pageUrl);
+  s.telephone=v.telephone;
+  if(v.priceRange)  s.priceRange=v.priceRange;
+  s.address={"@type":"PostalAddress","streetAddress":v.streetAddr,"addressLocality":v.city,"addressRegion":v.state.toUpperCase(),"postalCode":v.zip,"addressCountry":v.country.toUpperCase()};
+
+  // Geo
+  const lat=parseFloat(v.lat),lng=parseFloat(v.lng);
+  if(v.lat&&v.lng&&!isNaN(lat)&&!isNaN(lng)){
+    s.geo={"@type":"GeoCoordinates","latitude":lat,"longitude":lng};
+  } else {
+    const gm=[];
+    if(!v.lat||isNaN(parseFloat(v.lat)))gm.push('latitude');
+    if(!v.lng||isNaN(parseFloat(v.lng)))gm.push('longitude');
+    if(gm.length)summary.push({type:'warn',lbl:'Geo coordinates (geo property)',msg:'omitted from LegalService — missing: '+gm.join(' and ')});
+  }
+
+  if(v.hasMap)       s.hasMap=v.hasMap;
+
+  const hrs=genHoursSpec(summary);
+  if(hrs)s.openingHoursSpecification=hrs;
+
+  if(v.legalName)    s.legalName=v.legalName;
+  if(v.foundingYear) s.foundingDate=v.foundingYear;
+  if(v.areaServed)   s.areaServed={"@type":"City","name":v.areaServed};
+  const sa=v.sameAs.filter(u=>u);
+  if(sa.length)s.sameAs=sa;
+
+  // AggregateRating
+  if(v.ratingOk&&v.ratingVal&&v.reviewCount){
+    const rv=parseFloat(v.ratingVal),rc=parseInt(v.reviewCount);
+    if(!isNaN(rv)&&!isNaN(rc)&&rv>=1&&rv<=5&&rc>=1){
+      s.aggregateRating={"@type":"AggregateRating","ratingValue":rv,"bestRating":5,"worstRating":1,"reviewCount":rc};
+    } else {
+      summary.push({type:'warn',lbl:'AggregateRating',msg:'not generated — rating value or review count is invalid'});
+    }
+  } else if(v.ratingOk&&(v.ratingVal||v.reviewCount)){
+    const m=[];if(!v.ratingVal)m.push('average rating');if(!v.reviewCount)m.push('review count');
+    summary.push({type:'warn',lbl:'AggregateRating',msg:'not generated — missing: '+m.join(', ')});
+  } else if(!v.ratingOk&&(v.ratingVal||v.reviewCount)){
+    summary.push({type:'warn',lbl:'AggregateRating',msg:'not generated — compliance checkbox not confirmed'});
+  }
+
+  summary.push({type:'ok',lbl:'LegalService',msg:'generated'+(s.aggregateRating?' (includes AggregateRating)':'')});
+  return s;
+}
+
+/* ── @GRAPH BLOCK ── */
+function genGraph(v,summary){
+  const graphExists=document.querySelector('input[name="graphExists"]:checked')?.value;
+
+  if(!graphExists){
+    summary.push({type:'warn',lbl:'WebPage + BreadcrumbList + Organization',msg:'not generated because the existing @graph status was not confirmed — select Yes or No in Section 3'});
+    return null;
+  }
+  if(graphExists==='yes'){
+    summary.push({type:'skip',lbl:'WebPage + BreadcrumbList + Organization',msg:'skipped intentionally — existing @graph was marked as present, so this block was not generated to avoid duplicate schema. Verify the existing Yoast/RankMath schema is accurate.'});
+    return null;
+  }
+
+  // graphExists === 'no' — check required fields
+  const miss=[];
+  if(!v.homeUrl)    miss.push('homepage URL');
+  if(!v.pageUrl)    miss.push('practice area page URL');
+  if(!v.pageTitle)  miss.push('page title');
+  if(!v.metaDesc)   miss.push('page meta description');
+  if(!v.logoUrl)    miss.push('logo URL');
+  if(!v.crumbFinal) miss.push('final breadcrumb label');
+  if(miss.length){summary.push({type:'warn',lbl:'WebPage + BreadcrumbList + Organization',msg:'not generated — missing: '+miss.join(', ')});return null;}
+
+  const home=stripSlash(v.homeUrl);
+  const page=stripSlash(v.pageUrl);
+
+  const wp={
+    "@type":"WebPage",
+    "@id":page+'#webpage',
+    "url":page+'/',
+    "name":v.pageTitle,
+    "description":v.metaDesc,
+    "isPartOf":{"@id":home+'#website'},
+    "breadcrumb":{"@id":page+'#breadcrumb'},
+    "inLanguage":"en-US"
+  };
+  if(v.datePub)wp.datePublished=v.datePub;
+  if(v.dateMod)wp.dateModified=v.dateMod;
+
+  const items=[{"@type":"ListItem","position":1,"name":"Home","item":home+'/'}];
+  let pos=2;
+  if(v.crumbMid){
+    const mi={"@type":"ListItem","position":pos,"name":v.crumbMid};
+    if(v.crumbMidUrl)mi.item=v.crumbMidUrl;
+    items.push(mi);pos++;
+  }
+  items.push({"@type":"ListItem","position":pos,"name":v.crumbFinal});
+
+  const bc={"@type":"BreadcrumbList","@id":page+'#breadcrumb',"itemListElement":items};
+  const ws={"@type":"WebSite","@id":home+'#website',"url":home+'/',"name":v.firmName||'',"inLanguage":"en-US"};
+  const org={"@type":"Organization","@id":home+'#organization',"name":v.firmName||'',"url":home+'/',"logo":v.logoUrl};
+  const sa=v.sameAs.filter(u=>u);if(sa.length)org.sameAs=sa;
+
+  summary.push({type:'ok',lbl:'WebPage + BreadcrumbList + Organization',msg:'generated'});
+  return{"@context":"https://schema.org","@graph":[wp,bc,ws,org]};
+}
+
+/* ── FAQPAGE ── */
+function genFAQ(v,summary){
+  if(!faqItems.length)return null;
+  const complete=[],incomplete=[];
+  faqItems.forEach((f,i)=>{
+    const hq=f.q.trim(),ha=f.a.trim();
+    if(hq&&ha)complete.push(f);
+    else{const w=!hq&&!ha?'question and answer are both missing':!hq?'question is missing':'answer is missing';incomplete.push({num:i+1,w});}
+  });
+  incomplete.forEach(it=>summary.push({type:'warn',lbl:`FAQ pair ${it.num}`,msg:`excluded — ${it.w}`}));
+  if(complete.length<2){
+    summary.push({type:'warn',lbl:'FAQPage',msg:`not generated — only ${complete.length} complete pair${complete.length===1?'':'s'} (minimum 2 required)`});
+    return null;
+  }
+  summary.push({type:'ok',lbl:'FAQPage',msg:`generated — ${complete.length} Q&A pairs`});
+  return{"@context":"https://schema.org","@type":"FAQPage","mainEntity":complete.map(f=>({"@type":"Question","name":f.q.trim(),"acceptedAnswer":{"@type":"Answer","text":f.a.trim()}}))};
+}
+
+/* ── PRODUCT OPT-IN UI ── */
+function productOptInUI(){
+  const on=document.getElementById('productOptIn')?.checked||false;
+  const el=document.getElementById('productFields');
+  if(el)el.style.display=on?'block':'none';
+}
+
+/* ── ATTORNEY ── */
+function genAtty(v,summary){
+  if(!v.attyOk)return null;
+  if(!v.attyName){summary.push({type:'warn',lbl:'Attorney (Person)',msg:'not generated — attorney name is required'});return null;}
+  const s={"@context":"https://schema.org","@type":"Person","name":v.attyName};
+  if(v.attyTitle)s.jobTitle=v.attyTitle;
+  if(v.attyUrl)s.url=v.attyUrl;
+  if(v.homeUrl)s.worksFor={"@type":"LegalService","@id":stripSlash(v.homeUrl)+'#legalservice'};
+  if(v.attyBar)s.additionalProperty={"@type":"PropertyValue","name":"State Bar Number","value":v.attyBar};
+  summary.push({type:'ok',lbl:'Attorney (Person)',msg:'generated'});
+  return s;
+}
+
+/* ── PRODUCT (experimental) ── */
+function genProduct(v,summary){
+  if(!v.productOptIn)return null;
+  if(!v.ratingOk){
+    summary.push({type:'warn',lbl:'Product (experimental)',msg:'not generated — visibility/compliance checkbox not confirmed'});
+    return null;
+  }
+  // AggregateRating required
+  const rv=parseFloat(v.ratingVal),rc=parseInt(v.reviewCount);
+  if(!v.ratingVal||!v.reviewCount||isNaN(rv)||isNaN(rc)||rv<1||rv>5||rc<1){
+    const m=[];
+    if(!v.ratingVal||isNaN(parseFloat(v.ratingVal)))m.push('rating value');
+    if(!v.reviewCount||isNaN(parseInt(v.reviewCount)))m.push('review count');
+    summary.push({type:'warn',lbl:'Product (experimental)',msg:'not generated — missing: '+m.join(', ')});
+    return null;
+  }
+  // At least one complete visible Review required
+  const rr=parseInt(v.reviewRating);
+  const rm=[];
+  if(!v.reviewerName)rm.push('reviewer name');
+  if(!v.reviewText)  rm.push('review text');
+  if(!v.reviewRating||isNaN(rr)||rr<1||rr>5)rm.push('reviewer rating (1–5)');
+  if(rm.length){
+    summary.push({type:'warn',lbl:'Product (experimental)',msg:'not generated — complete Review item required: '+rm.join(', ')});
+    return null;
+  }
+  const s={
+    "@context":"https://schema.org",
+    "@type":"Product",
+    "name":v.firmName,
+    "aggregateRating":{"@type":"AggregateRating","ratingValue":rv,"bestRating":5,"worstRating":1,"reviewCount":rc},
+    "review":[{
+      "@type":"Review",
+      "reviewBody":v.reviewText,
+      "author":{"@type":"Person","name":v.reviewerName},
+      "reviewRating":{"@type":"Rating","ratingValue":rr,"bestRating":5,"worstRating":1}
+    }]
+  };
+  if(v.imageUrl)   s.image=v.imageUrl;
+  if(v.description)s.description=v.description;
+  summary.push({type:'ok',lbl:'Product (experimental)',msg:'generated — experimental only; LegalService remains the primary schema type'});
+  return s;
+}
+
+/* ── GEO TAGS ── */
+function genGeoTags(v,summary){
+  const miss=[];
+  if(!v.state)miss.push('state abbreviation');
+  if(!v.city)miss.push('city');
+  const lat=parseFloat(v.lat),lng=parseFloat(v.lng);
+  const ok_lat=v.lat&&!isNaN(lat),ok_lng=v.lng&&!isNaN(lng);
+  if(!ok_lat)miss.push('latitude');
+  if(!ok_lng)miss.push('longitude');
+  if(miss.length){summary.push({type:'warn',lbl:'Geo Tags (HTML meta)',msg:'not generated — missing: '+miss.join(', ')});return null;}
+  summary.push({type:'ok',lbl:'Geo Tags (HTML meta)',msg:'generated — paste into <head>'});
+  const region=v.country.toUpperCase()+'-'+v.state.toUpperCase();
+  return`<!-- Geo Tags -->\n<meta name="geo.region" content="${escA(region)}" />\n<meta name="geo.placename" content="${escA(v.city)}" />\n<meta name="geo.position" content="${lat};${lng}" />\n<meta name="ICBM" content="${lat}, ${lng}" />`;
+}
+
+/* ── MAIN GENERATE ── */
+function generate(){
+  syncHours();
+  const v={
+    firmName:fv('firmName'),legalName:fv('legalName'),
+    homeUrl:fv('homepageUrl'),pageUrl:fv('pageUrl'),
+    telephone:fv('telephone'),priceRange:fv('priceRange'),
+    streetAddr:fv('streetAddress'),city:fv('city'),
+    state:fv('stateAbbr'),zip:fv('zipCode'),country:fv('country')||'US',
+    lat:fv('latitude'),lng:fv('longitude'),
+    description:fv('description'),imageUrl:fv('imageUrl'),hasMap:fv('hasMap'),
+    areaServed:fv('areaServed'),foundingYear:fv('foundingYear'),
+    sameAs:sameAsList.filter(u=>u.trim()),
+    pageTitle:fv('pageTitle'),metaDesc:fv('metaDesc'),logoUrl:fv('logoUrl'),
+    crumbMid:fv('crumbMid'),crumbMidUrl:fv('crumbMidUrl'),crumbFinal:fv('crumbFinal'),
+    datePub:fv('datePub'),dateMod:fv('dateMod'),
+    ratingOk:fb('ratingOk'),ratingVal:fv('ratingVal'),reviewCount:fv('reviewCount'),
+    productOptIn:fb('productOptIn'),reviewerName:fv('reviewerName'),reviewText:fv('reviewText'),reviewRating:fv('reviewRating'),
+    attyOk:fb('attyOk'),attyName:fv('attyName'),attyTitle:fv('attyTitle'),
+    attyUrl:fv('attyUrl'),attyBar:fv('attyBar'),
+  };
+
+  const summary=[];
+  const ls      = genLS(v,summary);
+  const graph   = genGraph(v,summary);
+  const faq     = genFAQ(v,summary);
+  const atty    = genAtty(v,summary);
+  const product = genProduct(v,summary);
+  const geo     = genGeoTags(v,summary);
+
+  renderOut({ls,graph,faq,atty,product,geo,summary});
+}
+
+/* ── RENDER OUTPUT ── */
+function renderOut({ls,graph,faq,atty,product,geo,summary}){
+  document.getElementById('oPh').style.display='none';
+  const area=document.getElementById('outArea');
+  area.style.display='block';
+  area.innerHTML='';
+  _jsonBlocks=[];
+  document.getElementById('outPanel').scrollTop=0;
+
+  // Summary card
+  const okCt=summary.filter(s=>s.type==='ok').length;
+  const sumDiv=document.createElement('div');
+  sumDiv.className='sum-card';
+  sumDiv.innerHTML=`
+    <div class="sum-hd">
+      <span class="sum-title">Generation Summary</span>
+      <span class="sum-ct">${okCt} output${okCt!==1?'s':''} generated</span>
+    </div>
+    <div class="sum-bdy">
+      ${summary.map(s=>`
+        <div class="si si-${s.type==='ok'?'ok':s.type==='skip'?'skip':'warn'}">
+          <span class="si-ico">${s.type==='ok'?'✅':s.type==='skip'?'ℹ️':'⚠️'}</span>
+          <div class="si-txt"><strong>${esc(s.lbl)}</strong><span>${esc(s.msg)}</span></div>
+        </div>`).join('')}
+    </div>`;
+  area.appendChild(sumDiv);
+
+  // Nothing at all generated
+  if(!ls&&!graph&&!faq&&!atty&&!product&&!geo){
+    const em=document.createElement('div');em.className='o-empty';
+    em.innerHTML='<p>No schema blocks were generated.<br>Complete the required fields in Section 1 to generate the LegalService block.</p>';
+    area.appendChild(em);return;
+  }
+
+  // JSON-LD blocks
+  const blocks=[
+    {schema:ls,     lbl:'Block 1 — LegalService'},
+    {schema:graph,  lbl:'Block 2 — WebPage + BreadcrumbList + Organization'},
+    {schema:faq,    lbl:'Block 3 — FAQPage'},
+    {schema:atty,   lbl:'Block 4 — Attorney (Person)'},
+    {schema:product,lbl:'Block 5 — Product (experimental)',badge:'ob-exp'},
+  ];
+  blocks.forEach((b,i)=>{
+    if(!b.schema)return;
+    const json=JSON.stringify(b.schema,null,2);
+    _jsonBlocks.push(json);
+    const pid='blk'+i;
+    const badgeCls=b.badge||'ob-json';
+    const badgeTxt=b.badge?'experimental':'generated';
+    const sec=document.createElement('div');sec.className='o-sec';
+    sec.innerHTML=`
+      <div class="o-lbl">${esc(b.lbl)} <span class="o-badge ${badgeCls}">${badgeTxt}</span></div>
+      <div class="cw">
+        <div class="ctop"><span class="ctag">application/ld+json</span><button class="cp-btn" onclick="cpBlock('${pid}',this)">Copy</button></div>
+        <div class="cinner"><pre class="ccode" id="${pid}">${hlJson(json)}</pre></div>
+      </div>`;
+    area.appendChild(sec);
+  });
+
+  // Geo Tags
+  if(geo){
+    const gsec=document.createElement('div');gsec.className='o-sec';
+    gsec.innerHTML=`
+      <div class="o-lbl">Optional Geo Tags <span class="o-badge ob-geo">HTML — paste into &lt;head&gt;</span></div>
+      <div class="cw">
+        <div class="ctop"><span class="ctag">HTML meta tags</span><button class="cp-btn" onclick="cpGeo('geoBlk',this)">Copy</button></div>
+        <div class="geo-inner"><pre class="geocode" id="geoBlk">${escHtml(geo)}</pre></div>
+      </div>`;
+    area.appendChild(gsec);
+  }
+
+  // Copy All + Validation
+  const foot=document.createElement('div');foot.className='copy-all-wrap';
+  foot.innerHTML=`
+    <button class="copy-all-btn" id="copyAllBtn" ${_jsonBlocks.length?'':'disabled'} onclick="cpAll(this)">
+      Copy all JSON-LD blocks as &lt;script&gt; tags
+    </button>
+    <div class="val-box">
+      <p>Review your final schema before adding it to the website. Test the output in both tools before publishing.</p>
+      <div class="val-links">
+        <a class="val-a" href="https://search.google.com/test/rich-results" target="_blank" rel="noopener">↗ Google Rich Results Test</a>
+        <a class="val-a" href="https://validator.schema.org/" target="_blank" rel="noopener">↗ Schema.org Validator</a>
+      </div>
+    </div>`;
+  area.appendChild(foot);
+}
+
+/* ── COPY ── */
+function cpBlock(pid,btn){
+  const t=document.getElementById(pid)?.textContent||'';
+  if(!t.trim())return;
+  clip(`<script type="application/ld+json">\n${t}\n<\/script>`,btn,'Copied ✓','Copy');
+}
+function cpGeo(pid,btn){
+  const t=document.getElementById(pid)?.textContent||'';
+  clip(t,btn,'Copied ✓','Copy');
+}
+function cpAll(btn){
+  if(!_jsonBlocks.length)return;
+  const out=_jsonBlocks.map(b=>`<script type="application/ld+json">\n${b}\n<\/script>`).join('\n\n');
+  clip(out,btn,'All blocks copied ✓','Copy all JSON-LD blocks as <script> tags');
+}
+function clip(text,btn,ok,reset){
+  const do_it=()=>{btn.textContent=ok;btn.classList.add('did');setTimeout(()=>{btn.textContent=reset;btn.classList.remove('did');},2200);};
+  navigator.clipboard.writeText(text).then(do_it).catch(()=>{
+    const ta=Object.assign(document.createElement('textarea'),{value:text,style:'position:fixed;opacity:0'});
+    document.body.appendChild(ta);ta.select();
+    try{document.execCommand('copy');do_it();}catch(e){}
+    document.body.removeChild(ta);
+  });
+}
+
+/* ── HIGHLIGHT JSON ── */
+function hlJson(j){
+  return j.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/("(\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g,m=>{
+      if(/^"/.test(m))return/:$/.test(m)?`<span class="ck">${m}</span>`:`<span class="cs">${m}</span>`;
+      return`<span class="cn">${m}</span>`;
+    });
+}
+
+/* ── UTILS ── */
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function escHtml(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function escA(s){return(s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+</script>
+</body>
+</html>
