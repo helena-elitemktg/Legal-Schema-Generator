@@ -949,7 +949,7 @@ function genGeoTags(v,summary){
   if(miss.length){summary.push({type:'warn',lbl:'Geo Tags (HTML meta)',msg:'not generated — missing: '+miss.join(', ')});return null;}
   summary.push({type:'ok',lbl:'Geo Tags (HTML meta)',msg:'generated — paste into <head>'});
   const region=v.country.toUpperCase()+'-'+v.state.toUpperCase();
-  return`<!-- Geo Tags -->\n<meta name="geo.region" content="${escA(region)}" />\n<meta name="geo.placename" content="${escA(v.city)}" />\n<meta name="geo.position" content="${lat};${lng}" />\n<meta name="ICBM" content="${lat}, ${lng}" />`;
+  return`<meta name="geo.region" content="${escA(region)}" />\n<meta name="geo.placename" content="${escA(v.city)}" />\n<meta name="geo.position" content="${lat};${lng}" />\n<meta name="ICBM" content="${lat}, ${lng}" />`;
 }
 
 /* ── MAIN GENERATE ── */
